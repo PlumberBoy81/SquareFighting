@@ -1,0 +1,880 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+using TMPro;
+
+public class UniversalPlayerMovement : MonoBehaviour
+{
+    [Header("Player Setup")]
+    public bool isPlayerOne = true;
+
+    [Header("Movement Stats")]
+    public float runSpeed = 10f;
+    public float groundAcceleration = 60f;
+    public float groundDeceleration = 40f;
+    public float airAcceleration = 30f;
+
+    [Header("Jump Stats")]
+    public float jumpForce = 16f;
+    public int maxJumps = 2;
+    public float gravityScale = 4f;
+    public float fastFallSpeed = 25f;
+    public float fallSpeedLimit = 18f;
+    public float shortJumpForce = 11f;
+    public int jumpsquatFrames = 3;
+    private bool isJumpsquatting = false;
+
+
+    [Header("Dodge System")]
+    public float spotDodgeDuration = 0.5f;
+    public float rollSpeed = 15f;
+    public float rollDuration = 0.4f;
+    public float airDodgeSpeed = 15f;
+    public float airDodgeDuration = 0.4f;
+
+    [Header("Jab Attack (Glove)")]
+    public GameObject boxingGlove;
+    public float jabDuration = 0.15f;
+    public float jabCooldown = 0.3f;
+    public float jabBaseKnockback = 10f;
+    public float jabHitRadius = 0.6f;
+    public float jabDamage = 5f;
+
+    [Header("Hammer Attack (Dash/Smash)")]
+    public GameObject hammer;
+    public float dashSpeedThreshold = 5f;  
+    public float hammerBaseDamage = 12f;
+    public float hammerBaseKnockback = 18f;
+    public float hammerHitRadius = 1.0f;   
+    public float maxChargeMultiplier = 2.5f; 
+    public float chargeRate = 1.5f;        
+
+    [Header("Neutral Specials")]
+    public GameObject fireballPrefab; 
+    public float spinDuration = 0.4f; 
+    public float spinHitRadius = 1.5f;
+    public float spinDamage = 10f;
+    public float spinKnockback = 15f;
+
+    [Header("Down Specials")]
+    public GameObject reflectorVisual; // We will attach a hitbox to this later
+    public bool isReflecting = false;
+
+    public bool isSpinCharging = false;
+    public float spinChargeLevel = 0f;
+    public float maxSpinCharge = 5f;
+    public float spinDashBaseSpeed = 15f;
+    public bool isSpinDashing = false;
+    
+    // Make sure we track if down is currently being held!
+    public bool downHeld;
+
+    [Header("Defense System")]
+    public GameObject shieldVisual;
+
+    [Header("Damage System")]
+    public float damagePercentage = 0f;
+    public float weightMultiplier = 0.2f;  
+    public TextMeshProUGUI damageTextUI;
+
+    [Header("Stock System (Lives)")]
+    public int startingStocks = 3;
+    private int currentStocks;
+    public TextMeshProUGUI stockTextUI;
+
+    [Header("Respawn & Invincibility System")]
+    public Transform respawnPoint;
+    public float invincibilityDuration = 2f;
+    
+    [Header("Game Feel / Juice")]
+    public float jabHitstop = 0.05f;     
+    public float hammerBaseHitstop = 0.1f; 
+    public float maxHammerHitstop = 0.3f;  
+
+    [Header("Visual Effects")]
+    public GameObject hitSparkPrefab;
+
+    [Header("Audio")]
+    public AudioClip jumpSound;
+    public AudioClip doubleJumpSound;
+    public AudioClip jabSound;
+    public AudioClip hammerSound;
+    public AudioClip hitSound;
+    public AudioClip spikeHitSound;
+    public AudioClip specialSound; 
+    private AudioSource audioSource;
+
+    // State Variables
+    private Rigidbody2D rb;
+    private Collider2D playerCollider;
+    private SpriteRenderer spriteRenderer;
+    private bool isGrounded;
+    private int jumpCount = 0;
+    private GameObject currentOneWayPlatform;
+    private bool facingRight = true;
+    
+    private bool isAttacking = false;
+    private bool isCharging = false;
+    public bool isShielding = false; 
+    public bool isInvincible = false;
+    
+    public bool isDodging = false;
+    private bool hasAirDodged = false;
+    
+    private float currentChargeMult = 1f;
+    private Color originalBaseColor;
+
+    // Inputs
+    private float xInput;
+    private bool jumpPressed;
+    private bool jumpHeld;
+    private bool downPressed;
+    private bool leftPressed;   
+    private bool rightPressed;  
+    private bool attackPressed;
+    private bool attackHeld;
+    private bool shieldHeld;
+    private bool shieldPressed; 
+    private bool specialPressed; 
+
+    // Analog Stick State Tracking (To mimic a button press for dodging)
+    private bool stickDownWasHeld, stickLeftWasHeld, stickRightWasHeld;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        playerCollider = GetComponent<Collider2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+
+        int characterChoice = 0;
+        
+        if (isPlayerOne) characterChoice = PlayerPrefs.GetInt("P1Color", 0);
+        else characterChoice = PlayerPrefs.GetInt("P2Color", 1);
+
+        ApplyCharacterStats(characterChoice);
+        originalBaseColor = spriteRenderer.color;
+
+        rb.gravityScale = gravityScale;
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+        currentStocks = startingStocks;
+        UpdateUIText();
+    }
+
+    void ApplyCharacterStats(int charID)
+    {
+        Color characterColor = Color.white;
+
+        if (charID == 0) 
+        {
+            // RED CHARACTER STATS
+            characterColor = Color.red;
+            runSpeed = 10.5f;          
+            groundAcceleration = 60f; 
+            groundDeceleration = 45f;  
+            airAcceleration = 25f;     
+
+            jumpForce = 17.5f;         
+            shortJumpForce = 11f;     
+            jumpsquatFrames = 3;       
+
+            gravityScale = 4.2f;      
+            fallSpeedLimit = 15f;      
+            fastFallSpeed = 24f;       
+            weightMultiplier = 0.2f;  
+        }
+        else if (charID == 1) 
+        {
+            // BLUE CHARACTER STATS
+            characterColor = Color.blue;
+            runSpeed = 23.1f;           
+            groundAcceleration = 75f;
+            groundDeceleration = 60f;
+            airAcceleration = 16f;
+
+            jumpForce = 16.8f;          
+            shortJumpForce = 10.6f;
+            jumpsquatFrames = 3;
+
+            gravityScale = 4.4f;        
+            fallSpeedLimit = 16.5f;
+            fastFallSpeed = 26.4f;
+            weightMultiplier = 0.23f; 
+        }
+
+        // Apply the color to the main player body
+        spriteRenderer.color = characterColor;
+
+        // Color the Weapons and Shield to match!
+        if (boxingGlove != null)
+        {
+            SpriteRenderer gloveSR = boxingGlove.GetComponentInChildren<SpriteRenderer>();
+            if (gloveSR != null) gloveSR.color = characterColor;
+        }
+
+        if (hammer != null)
+        {
+            SpriteRenderer hammerSR = hammer.GetComponentInChildren<SpriteRenderer>();
+            if (hammerSR != null) hammerSR.color = characterColor;
+        }
+
+        if (shieldVisual != null)
+        {
+            SpriteRenderer shieldSR = shieldVisual.GetComponentInChildren<SpriteRenderer>();
+            if (shieldSR != null) 
+            {
+                shieldSR.color = new Color(characterColor.r, characterColor.g, characterColor.b, 0.5f); 
+            }
+        }
+    }
+
+
+
+    void Update()
+    {
+        ProcessInputs();
+        HandleFacingDirection();
+
+        if (downPressed && currentOneWayPlatform != null && !isCharging && !isShielding && !isDodging)
+        {
+            StartCoroutine(DisableCollision());
+        }
+
+        HandleDodges();
+        HandleShield();
+        HandleAttacks();
+    }
+
+    void FixedUpdate()
+    {
+        ApplyMovement();
+        ApplyGravityPhysics();
+    }
+
+    void ProcessInputs()
+    {
+        if (isPlayerOne)
+        {
+            // Read Analog Sticks
+            float joyX = 0f;
+            float joyY = 0f;
+            try { joyX = Input.GetAxisRaw("P1_Horizontal"); joyY = Input.GetAxisRaw("P1_Vertical"); } catch { }
+
+            // Standard Deadzone
+            float deadzone = 0.3f; 
+
+            // Movement X
+            xInput = 0;
+            if (Input.GetKey(KeyCode.A) || joyX < -deadzone) xInput = -1;
+            if (Input.GetKey(KeyCode.D) || joyX > deadzone) xInput = 1;
+
+            // Tracking Analog stick 'taps' for rolling and fast falling
+            bool stickIsDown = joyY > 0.5f;
+            bool stickIsLeft = joyX < -0.6f;
+            bool stickIsRight = joyX > 0.6f;
+
+            downHeld = Input.GetKey(KeyCode.S) || joyY > 0.5f;
+            downPressed = Input.GetKeyDown(KeyCode.S) || (stickIsDown && !stickDownWasHeld);
+            leftPressed = Input.GetKeyDown(KeyCode.A) || (stickIsLeft && !stickLeftWasHeld);
+            rightPressed = Input.GetKeyDown(KeyCode.D) || (stickIsRight && !stickRightWasHeld);
+
+            stickDownWasHeld = stickIsDown;
+            stickLeftWasHeld = stickIsLeft;
+            stickRightWasHeld = stickIsRight;
+
+            // Jump (Top Face Button: Switch X)
+            jumpPressed = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Joystick1Button3);
+            jumpHeld = Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Joystick1Button3);
+            
+            // Attack (Right Face Button: Switch A)
+            attackPressed = Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Joystick1Button1);
+            attackHeld = Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.Joystick1Button1);
+            
+            // Special (Bottom Face Button: Switch B)
+            specialPressed = Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Joystick1Button0);
+            
+            // Shield (Triggers ZL/ZR: Buttons 6 and 7. Left Bumpers 4 and 5 as fallbacks)
+            shieldPressed = Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Joystick1Button6) || Input.GetKeyDown(KeyCode.Joystick1Button7) || Input.GetKeyDown(KeyCode.Joystick1Button4) || Input.GetKeyDown(KeyCode.Joystick1Button5);
+            shieldHeld = Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Joystick1Button6) || Input.GetKey(KeyCode.Joystick1Button7) || Input.GetKey(KeyCode.Joystick1Button4) || Input.GetKey(KeyCode.Joystick1Button5);
+        }
+        else
+        {
+            // Read Analog Sticks
+            float joyX = 0f;
+            float joyY = 0f;
+            try { joyX = Input.GetAxisRaw("P2_Horizontal"); joyY = Input.GetAxisRaw("P2_Vertical"); } catch { }
+
+            // Standard Deadzone
+            float deadzone = 0.3f; 
+
+            // Movement X
+            xInput = 0;
+            if (Input.GetKey(KeyCode.LeftArrow) || joyX < -deadzone) xInput = -1;
+            if (Input.GetKey(KeyCode.RightArrow) || joyX > deadzone) xInput = 1;
+
+            // Tracking Analog stick 'taps'
+            bool stickIsDown = joyY > 0.5f;
+            bool stickIsLeft = joyX < -0.6f;
+            bool stickIsRight = joyX > 0.6f;
+
+            downHeld = Input.GetKey(KeyCode.DownArrow) || joyY > 0.5f;
+            downPressed = Input.GetKeyDown(KeyCode.DownArrow) || (stickIsDown && !stickDownWasHeld);
+            leftPressed = Input.GetKeyDown(KeyCode.LeftArrow) || (stickIsLeft && !stickLeftWasHeld);
+            rightPressed = Input.GetKeyDown(KeyCode.RightArrow) || (stickIsRight && !stickRightWasHeld);
+
+            stickDownWasHeld = stickIsDown;
+            stickLeftWasHeld = stickIsLeft;
+            stickRightWasHeld = stickIsRight;
+
+            // Jump (Top Face Button: Switch X)
+            jumpPressed = Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Joystick2Button3);
+            jumpHeld = Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.Joystick2Button3);
+            
+            // Attack (Right Face Button: Switch A)
+            attackPressed = Input.GetKeyDown(KeyCode.RightShift) || Input.GetKeyDown(KeyCode.Joystick2Button1);
+            attackHeld = Input.GetKey(KeyCode.RightShift) || Input.GetKey(KeyCode.Joystick2Button1);
+            
+            // Special (Bottom Face Button: Switch B)
+            specialPressed = Input.GetKeyDown(KeyCode.RightAlt) || Input.GetKeyDown(KeyCode.Joystick2Button0);
+            
+            // Shield (Triggers ZL/ZR)
+            shieldPressed = Input.GetKeyDown(KeyCode.RightControl) || Input.GetKeyDown(KeyCode.Joystick2Button6) || Input.GetKeyDown(KeyCode.Joystick2Button7) || Input.GetKeyDown(KeyCode.Joystick2Button4) || Input.GetKeyDown(KeyCode.Joystick2Button5);
+            shieldHeld = Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.Joystick2Button6) || Input.GetKey(KeyCode.Joystick2Button7) || Input.GetKey(KeyCode.Joystick2Button4) || Input.GetKey(KeyCode.Joystick2Button5);
+        }
+
+        if (jumpPressed && !isCharging && !isAttacking && !isShielding && !isDodging) TryJump();
+    }
+
+
+
+    // --- REMAINDER OF SCRIPT REMAINS EXACTLY THE SAME ---
+
+    void HandleFacingDirection()
+    {
+        if (isCharging || isAttacking || isShielding || isDodging) return;
+        if (xInput > 0 && !facingRight) Flip();
+        else if (xInput < 0 && facingRight) Flip();
+    }
+
+    void Flip()
+    {
+        facingRight = !facingRight;
+        Vector3 localScale = transform.localScale;
+        localScale.x *= -1f;
+        transform.localScale = localScale;
+    }
+
+    void HandleDodges()
+    {
+        if (isDodging || isAttacking || isCharging) return;
+
+        if (!isGrounded && shieldPressed && !hasAirDodged)
+        {
+            StartCoroutine(AirDodgeRoutine(xInput));
+            return;
+        }
+
+        if (isGrounded && shieldHeld)
+        {
+            if (downPressed) StartCoroutine(SpotDodgeRoutine());
+            else if (leftPressed) StartCoroutine(RollDodgeRoutine(-1f));
+            else if (rightPressed) StartCoroutine(RollDodgeRoutine(1f));
+        }
+    }
+
+   IEnumerator ReflectorSpecial()
+    {
+        isReflecting = true;
+        isAttacking = true;
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop horizontal momentum
+        
+        if (reflectorVisual != null) reflectorVisual.SetActive(true);
+        
+        yield return new WaitForSeconds(0.4f); // Reflector lasts for 0.4 seconds
+        
+        if (reflectorVisual != null) reflectorVisual.SetActive(false);
+        isReflecting = false;
+        isAttacking = false;
+    }
+
+    IEnumerator StartSpinCharge()
+    {
+        isSpinCharging = true;
+        spinChargeLevel = 1f; // Base charge
+        yield return null;
+    }
+
+   IEnumerator ExecuteSpinDash()
+    {
+        isSpinCharging = false;
+        isSpinDashing = true; // <-- Lock movement
+        isAttacking = true;
+        
+        float dashDirection = spriteRenderer.flipX ? -1f : 1f; 
+        float finalDashSpeed = spinDashBaseSpeed + (spinChargeLevel * 5f);
+        
+        // Zero out Y velocity so they shoot straight
+        rb.linearVelocity = new Vector2(dashDirection * finalDashSpeed, 0f);
+        
+        yield return new WaitForSeconds(0.4f);
+        
+        rb.linearVelocity = Vector2.zero; 
+        isAttacking = false;
+        isSpinDashing = false; // <-- Unlock movement
+        spinChargeLevel = 0f;
+    }
+
+
+
+    private IEnumerator SpotDodgeRoutine()
+    {
+        isDodging = true;
+        isShielding = false; 
+        shieldVisual.SetActive(false);
+        rb.linearVelocity = Vector2.zero; 
+        
+        float elapsed = 0f;
+        while (elapsed < spotDodgeDuration)
+        {
+            transform.Rotate(0, 0, 1440f * Time.deltaTime);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        
+        transform.rotation = Quaternion.identity; 
+        isDodging = false;
+    }
+
+    private IEnumerator RollDodgeRoutine(float direction)
+    {
+        isDodging = true;
+        isShielding = false;
+        shieldVisual.SetActive(false);
+        
+        float elapsed = 0f;
+        while (elapsed < rollDuration)
+        {
+            rb.linearVelocity = new Vector2(direction * rollSpeed, rb.linearVelocity.y);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); 
+        isDodging = false;
+    }
+
+    private IEnumerator AirDodgeRoutine(float directionX)
+    {
+        isDodging = true;
+        hasAirDodged = true;
+        
+        rb.gravityScale = 0f; 
+        rb.linearVelocity = Vector2.zero;
+
+        if (Mathf.Abs(directionX) > 0.1f)
+        {
+            rb.linearVelocity = new Vector2(Mathf.Sign(directionX) * airDodgeSpeed, 0);
+        }
+
+        yield return new WaitForSeconds(airDodgeDuration);
+        
+        rb.linearVelocity = Vector2.zero; 
+        rb.gravityScale = gravityScale;
+        isDodging = false;
+    }
+
+    void HandleShield()
+    {
+        if (shieldHeld && isGrounded && !isAttacking && !isCharging && !isDodging)
+        {
+            isShielding = true;
+            shieldVisual.SetActive(true);
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); 
+        }
+        else
+        {
+            isShielding = false;
+            shieldVisual.SetActive(false);
+        }
+    }
+
+    void HandleAttacks()
+    {
+        if (isShielding || isDodging) return;
+
+        // --- SPIN DASH CHARGE STATE ---
+        if (isSpinCharging)
+        {
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop moving left/right while charging
+            
+            // Rapidly press Special to build charge
+            if (specialPressed) 
+            {
+                spinChargeLevel += 1f;
+                spinChargeLevel = Mathf.Min(spinChargeLevel, maxSpinCharge);
+                // Optional: Change color or play a sound here to show charge level!
+            }
+
+            // If they let go of Down, unleash the Spin Dash!
+            if (!downHeld) 
+            {
+                StartCoroutine(ExecuteSpinDash());
+            }
+            return; // Don't allow other attacks while charging
+        }
+
+        // --- INITIATING SPECIALS ---
+        if (specialPressed && !isAttacking && !isCharging)
+        {
+            if (downHeld)
+            {
+                // DOWN SPECIALS
+                if (isPlayerOne) StartCoroutine(ReflectorSpecial());
+                else StartCoroutine(StartSpinCharge());
+            }
+            else
+            {
+                // NEUTRAL SPECIALS
+                if (isPlayerOne) StartCoroutine(FireballSpecial());
+                else StartCoroutine(SpinSpecial());
+            }
+        }
+
+
+        if (attackPressed && !isAttacking && !isCharging && !specialPressed)
+        {
+            // Check if they are moving fast on the ground (Dash Attack)
+            bool isDashingOnGround = isGrounded && Mathf.Abs(rb.linearVelocity.x) >= dashSpeedThreshold;
+            
+            // Check if they are moving in the air (either pushing a direction, or drifting from momentum)
+            bool isMovingInAir = !isGrounded && (Mathf.Abs(rb.linearVelocity.x) > 0.5f || Mathf.Abs(xInput) > 0.1f);
+
+            // If moving in the air OR dashing on the ground, use the Hammer
+            if (isDashingOnGround || isMovingInAir)
+            {
+                isCharging = true;
+                currentChargeMult = 1f; 
+            }
+            else 
+            {
+                // If standing still on the ground, or perfectly neutral in the air, use Jab!
+                StartCoroutine(JabAttack());
+            }
+        }
+
+        if (isCharging)
+        {
+            rb.linearVelocity = Vector2.zero;
+            rb.gravityScale = 0f;
+
+            if (attackHeld)
+            {
+                currentChargeMult += chargeRate * Time.deltaTime;
+                currentChargeMult = Mathf.Min(currentChargeMult, maxChargeMultiplier);
+                spriteRenderer.color = Color.Lerp(originalBaseColor, Color.red, (currentChargeMult - 1f) / (maxChargeMultiplier - 1f));
+            }
+            else
+            {
+                isCharging = false;
+                rb.gravityScale = gravityScale; 
+                spriteRenderer.color = originalBaseColor; 
+                StartCoroutine(ExecuteHammerAttack());
+            }
+        }
+    }
+
+
+    private IEnumerator FireballSpecial()
+    {
+        isAttacking = true;
+        if (audioSource != null && specialSound != null) audioSource.PlayOneShot(specialSound);
+
+        if (fireballPrefab != null)
+        {
+            Vector2 spawnPos = (Vector2)transform.position + new Vector2(facingRight ? 1f : -1f, 0f);
+            GameObject fb = Instantiate(fireballPrefab, spawnPos, Quaternion.identity);
+            
+            Fireball fbScript = fb.GetComponent<Fireball>();
+            if (fbScript != null) fbScript.Setup(facingRight, this.gameObject);
+        }
+
+        yield return new WaitForSeconds(0.4f); 
+        isAttacking = false;
+    }
+
+    private IEnumerator SpinSpecial()
+    {
+        isAttacking = true;
+        if (audioSource != null && specialSound != null) audioSource.PlayOneShot(specialSound);
+
+        CheckHitbox(transform.position, spinHitRadius, spinDamage, spinKnockback, 0.1f, false);
+
+        float elapsed = 0f;
+        while (elapsed < spinDuration)
+        {
+            transform.Rotate(0, 0, 1500f * Time.deltaTime * (facingRight ? -1 : 1));
+            elapsed += Time.deltaTime;
+            yield return null; 
+        }
+
+        transform.rotation = Quaternion.identity; 
+        isAttacking = false;
+    }
+
+    private IEnumerator JabAttack()
+    {
+        isAttacking = true;
+        boxingGlove.SetActive(true);
+        if (audioSource != null && jabSound != null) audioSource.PlayOneShot(jabSound);
+        CheckHitbox(boxingGlove.transform.position, jabHitRadius, jabDamage, jabBaseKnockback, jabHitstop, false);
+        yield return new WaitForSeconds(jabDuration);
+        boxingGlove.SetActive(false);
+        yield return new WaitForSeconds(jabCooldown);
+        isAttacking = false;
+    }
+
+    private IEnumerator ExecuteHammerAttack()
+    {
+        isAttacking = true;
+        hammer.SetActive(true);
+
+        if (audioSource != null && hammerSound != null) audioSource.PlayOneShot(hammerSound);
+
+        float finalDamage = hammerBaseDamage * currentChargeMult;
+        float finalKnockback = hammerBaseKnockback * currentChargeMult;
+        float finalHitstop = Mathf.Lerp(hammerBaseHitstop, maxHammerHitstop, (currentChargeMult - 1f) / (maxChargeMultiplier - 1f));
+
+        CheckHitbox(hammer.transform.position, hammerHitRadius, finalDamage, finalKnockback, finalHitstop, true);
+
+        yield return new WaitForSeconds(0.25f); 
+        hammer.SetActive(false);
+        yield return new WaitForSeconds(0.4f);
+        isAttacking = false;
+    }
+
+    void CheckHitbox(Vector2 center, float radius, float damage, float baseKb, float hitstopValue, bool isSpike)
+    {
+        Collider2D[] hitObjects = Physics2D.OverlapCircleAll(center, radius);
+        foreach (Collider2D hit in hitObjects)
+        {
+            if (hit.CompareTag("Player") && hit.gameObject != this.gameObject)
+            {
+                UniversalPlayerMovement enemyScript = hit.GetComponent<UniversalPlayerMovement>();
+                
+                if (enemyScript != null && !enemyScript.isInvincible && !enemyScript.isShielding && !enemyScript.isDodging)
+                {
+                    enemyScript.TakeDamage(damage, baseKb, facingRight, isSpike);
+                    StartCoroutine(HitstopRoutine(hitstopValue)); 
+                    
+                    if (hitSparkPrefab != null)
+                    {
+                        Vector2 sparkPosition = (center + (Vector2)hit.transform.position) / 2f;
+                        Instantiate(hitSparkPrefab, sparkPosition, Quaternion.identity);
+                    }
+                }
+            }
+        }
+    }
+
+    public void TakeDamage(float damageTaken, float baseKb, bool attackedFromRight, bool isSpike)
+    {
+        if (isInvincible || isShielding || isDodging) return;
+
+        damagePercentage += damageTaken;
+        UpdateUIText();
+
+        float totalKnockback = baseKb + (damagePercentage * weightMultiplier);
+        
+        Vector2 kbDirection;
+        
+        if (isSpike && !isGrounded)
+        {
+            kbDirection = Vector2.down;
+            if (audioSource != null && spikeHitSound != null) audioSource.PlayOneShot(spikeHitSound);
+        }
+        else
+        {
+            kbDirection = attackedFromRight ? Vector2.right : Vector2.left;
+            kbDirection.y = 0.75f;
+            if (audioSource != null && hitSound != null) audioSource.PlayOneShot(hitSound);
+        }
+
+        isCharging = false;
+        rb.gravityScale = gravityScale; 
+        spriteRenderer.color = originalBaseColor;
+        transform.rotation = Quaternion.identity; 
+
+        rb.linearVelocity = Vector2.zero;
+        rb.AddForce(kbDirection.normalized * totalKnockback, ForceMode2D.Impulse);
+    }
+
+    private IEnumerator HitstopRoutine(float duration)
+    {
+        Time.timeScale = 0f;
+        yield return new WaitForSecondsRealtime(duration);
+        Time.timeScale = 1f;
+    }
+
+    void UpdateUIText()
+    {
+        if (damageTextUI != null) damageTextUI.text = Mathf.FloorToInt(damagePercentage).ToString() + "%";
+        if (stockTextUI != null) stockTextUI.text = "Stocks: " + currentStocks;
+    }
+
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("BlastZone")) DieAndRespawn();
+    }
+
+    void DieAndRespawn()
+    {
+        currentStocks--;
+        UpdateUIText();
+
+        if (currentStocks <= 0)
+        {
+            gameObject.SetActive(false);
+            return; 
+        }
+
+        damagePercentage = 0f;
+        UpdateUIText();
+        rb.linearVelocity = Vector2.zero;
+        isCharging = false;
+        isShielding = false; 
+        isDodging = false; 
+        hasAirDodged = false;
+        rb.gravityScale = gravityScale; 
+        shieldVisual.SetActive(false);
+        spriteRenderer.color = originalBaseColor;
+        transform.rotation = Quaternion.identity;
+
+        if (respawnPoint != null) transform.position = respawnPoint.position;
+        else transform.position = new Vector3(0, 10, 0); 
+
+        StartCoroutine(InvincibilityRoutine());
+    }
+
+    private IEnumerator InvincibilityRoutine()
+    {
+        isInvincible = true;
+        Color flashColor = new Color(originalBaseColor.r, originalBaseColor.g, originalBaseColor.b, 0.3f); 
+        float timer = 0f;
+        bool isFlashing = false;
+
+        while (timer < invincibilityDuration)
+        {
+            spriteRenderer.color = isFlashing ? originalBaseColor : flashColor;
+            isFlashing = !isFlashing;
+            yield return new WaitForSeconds(0.1f);
+            timer += 0.1f;
+        }
+
+        spriteRenderer.color = originalBaseColor;
+        isInvincible = false;
+    }
+
+    void ApplyMovement()
+    {
+        if (isCharging || isShielding || isDodging || isSpinDashing) return; 
+
+        float targetSpeed = xInput * runSpeed;
+        float accelRate;
+        if (isGrounded) accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? groundAcceleration : groundDeceleration;
+        else accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airAcceleration : 5f;
+
+        float speedDif = targetSpeed - rb.linearVelocity.x;
+        float movement = speedDif * accelRate * Time.fixedDeltaTime;
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x + movement, rb.linearVelocity.y);
+    }
+
+    void ApplyGravityPhysics()
+    {
+        if (isCharging || isDodging || isSpinDashing) return; 
+
+        float currentMaxFall = (downPressed && !isGrounded) ? fastFallSpeed : fallSpeedLimit;
+        if (rb.linearVelocity.y < -currentMaxFall) rb.linearVelocity = new Vector2(rb.linearVelocity.x, -currentMaxFall);
+        if (!isGrounded && downPressed && rb.linearVelocity.y < 0) rb.linearVelocity = new Vector2(rb.linearVelocity.x, -fastFallSpeed);
+        if (!jumpHeld && rb.linearVelocity.y > 0) rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f);
+    }
+
+   void TryJump()
+    {
+        // If grounded, initiate jumpsquat. (Double jumps bypass jumpsquat!)
+        if (isGrounded && !isJumpsquatting)
+        {
+            StartCoroutine(JumpsquatRoutine());
+        }
+        else if (!isGrounded && jumpCount < maxJumps)
+        {
+            ExecuteJump(jumpForce); 
+        }
+    }
+
+    private IEnumerator JumpsquatRoutine()
+    {
+        isJumpsquatting = true;
+        
+        // Wait for the specific amount of frames (assuming 60 FPS, 1 frame is ~0.0166s)
+        yield return new WaitForSeconds(jumpsquatFrames / 60f);
+
+        // The jumpsquat is over. Check if the player is still holding the jump button.
+        float forceToApply = jumpHeld ? jumpForce : shortJumpForce;
+        
+        ExecuteJump(forceToApply);
+        isJumpsquatting = false;
+    }
+
+    void ExecuteJump(float appliedForce)
+    {
+        if (audioSource != null)
+        {
+            if (jumpCount == 0 && jumpSound != null) audioSource.PlayOneShot(jumpSound);
+            else if (jumpCount > 0 && doubleJumpSound != null) audioSource.PlayOneShot(doubleJumpSound);
+        }
+
+        // Reset Y velocity so double jumps feel consistent even when falling
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0); 
+        rb.AddForce(Vector2.up * appliedForce, ForceMode2D.Impulse);
+        
+        jumpCount++;
+        isGrounded = false;
+    }
+
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        bool isPlatform = collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Platform");
+        if (isPlatform)
+        {
+            foreach (ContactPoint2D contact in collision.contacts)
+            {
+                if (contact.normal.y > 0.5f)
+                {
+                    isGrounded = true;
+                    jumpCount = 0; 
+                    hasAirDodged = false; 
+                    break;
+                }
+            }
+        }
+        if (collision.gameObject.CompareTag("Platform")) currentOneWayPlatform = collision.gameObject;
+    }
+
+    void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Platform")) currentOneWayPlatform = null;
+    }
+
+    private IEnumerator DisableCollision()
+    {
+        Collider2D platformCollider = currentOneWayPlatform.GetComponent<Collider2D>();
+        Physics2D.IgnoreCollision(playerCollider, platformCollider);
+        yield return new WaitForSeconds(0.25f);
+        Physics2D.IgnoreCollision(playerCollider, platformCollider, false);
+    }
+}
