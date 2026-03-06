@@ -57,7 +57,7 @@ public class UniversalPlayerMovement : MonoBehaviour
     public float spinKnockback = 15f;
 
     [Header("Down Specials")]
-    public GameObject reflectorVisual; // We will attach a hitbox to this later
+    public GameObject reflectorVisual; 
     public bool isReflecting = false;
 
     public bool isSpinCharging = false;
@@ -66,7 +66,6 @@ public class UniversalPlayerMovement : MonoBehaviour
     public float spinDashBaseSpeed = 15f;
     public bool isSpinDashing = false;
     
-    // Make sure we track if down is currently being held!
     public bool downHeld;
 
     [Header("Defense System")]
@@ -104,7 +103,6 @@ public class UniversalPlayerMovement : MonoBehaviour
     public AudioClip specialSound; 
     private AudioSource audioSource;
 
-    // State Variables
     private Rigidbody2D rb;
     private Collider2D playerCollider;
     private SpriteRenderer spriteRenderer;
@@ -124,7 +122,6 @@ public class UniversalPlayerMovement : MonoBehaviour
     private float currentChargeMult = 1f;
     private Color originalBaseColor;
 
-    // Inputs
     private float xInput;
     private bool jumpPressed;
     private bool jumpHeld;
@@ -137,7 +134,6 @@ public class UniversalPlayerMovement : MonoBehaviour
     private bool shieldPressed; 
     private bool specialPressed; 
 
-    // Analog Stick State Tracking (To mimic a button press for dodging)
     private bool stickDownWasHeld, stickLeftWasHeld, stickRightWasHeld;
 
     void Start()
@@ -171,7 +167,6 @@ public class UniversalPlayerMovement : MonoBehaviour
 
         if (charID == 0) 
         {
-            // RED CHARACTER STATS
             characterColor = Color.red;
             runSpeed = 10.5f;          
             groundAcceleration = 60f; 
@@ -189,7 +184,6 @@ public class UniversalPlayerMovement : MonoBehaviour
         }
         else if (charID == 1) 
         {
-            // BLUE CHARACTER STATS
             characterColor = Color.blue;
             runSpeed = 23.1f;           
             groundAcceleration = 75f;
@@ -206,10 +200,8 @@ public class UniversalPlayerMovement : MonoBehaviour
             weightMultiplier = 0.23f; 
         }
 
-        // Apply the color to the main player body
         spriteRenderer.color = characterColor;
 
-        // Color the Weapons and Shield to match!
         if (boxingGlove != null)
         {
             SpriteRenderer gloveSR = boxingGlove.GetComponentInChildren<SpriteRenderer>();
@@ -259,20 +251,16 @@ public class UniversalPlayerMovement : MonoBehaviour
     {
         if (isPlayerOne)
         {
-            // Read Analog Sticks
             float joyX = 0f;
             float joyY = 0f;
             try { joyX = Input.GetAxisRaw("P1_Horizontal"); joyY = Input.GetAxisRaw("P1_Vertical"); } catch { }
 
-            // Standard Deadzone
             float deadzone = 0.3f; 
 
-            // Movement X
             xInput = 0;
             if (Input.GetKey(KeyCode.A) || joyX < -deadzone) xInput = -1;
             if (Input.GetKey(KeyCode.D) || joyX > deadzone) xInput = 1;
 
-            // Tracking Analog stick 'taps' for rolling and fast falling
             bool stickIsDown = joyY > 0.5f;
             bool stickIsLeft = joyX < -0.6f;
             bool stickIsRight = joyX > 0.6f;
@@ -286,37 +274,29 @@ public class UniversalPlayerMovement : MonoBehaviour
             stickLeftWasHeld = stickIsLeft;
             stickRightWasHeld = stickIsRight;
 
-            // Jump (Top Face Button: Switch X)
             jumpPressed = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Joystick1Button3);
             jumpHeld = Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Joystick1Button3);
             
-            // Attack (Right Face Button: Switch A)
             attackPressed = Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Joystick1Button1);
             attackHeld = Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.Joystick1Button1);
             
-            // Special (Bottom Face Button: Switch B)
             specialPressed = Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Joystick1Button0);
             
-            // Shield (Triggers ZL/ZR: Buttons 6 and 7. Left Bumpers 4 and 5 as fallbacks)
             shieldPressed = Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Joystick1Button6) || Input.GetKeyDown(KeyCode.Joystick1Button7) || Input.GetKeyDown(KeyCode.Joystick1Button4) || Input.GetKeyDown(KeyCode.Joystick1Button5);
             shieldHeld = Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Joystick1Button6) || Input.GetKey(KeyCode.Joystick1Button7) || Input.GetKey(KeyCode.Joystick1Button4) || Input.GetKey(KeyCode.Joystick1Button5);
         }
         else
         {
-            // Read Analog Sticks
             float joyX = 0f;
             float joyY = 0f;
             try { joyX = Input.GetAxisRaw("P2_Horizontal"); joyY = Input.GetAxisRaw("P2_Vertical"); } catch { }
 
-            // Standard Deadzone
             float deadzone = 0.3f; 
 
-            // Movement X
             xInput = 0;
             if (Input.GetKey(KeyCode.LeftArrow) || joyX < -deadzone) xInput = -1;
             if (Input.GetKey(KeyCode.RightArrow) || joyX > deadzone) xInput = 1;
 
-            // Tracking Analog stick 'taps'
             bool stickIsDown = joyY > 0.5f;
             bool stickIsLeft = joyX < -0.6f;
             bool stickIsRight = joyX > 0.6f;
@@ -330,28 +310,20 @@ public class UniversalPlayerMovement : MonoBehaviour
             stickLeftWasHeld = stickIsLeft;
             stickRightWasHeld = stickIsRight;
 
-            // Jump (Top Face Button: Switch X)
             jumpPressed = Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Joystick2Button3);
             jumpHeld = Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.Joystick2Button3);
             
-            // Attack (Right Face Button: Switch A)
             attackPressed = Input.GetKeyDown(KeyCode.RightShift) || Input.GetKeyDown(KeyCode.Joystick2Button1);
             attackHeld = Input.GetKey(KeyCode.RightShift) || Input.GetKey(KeyCode.Joystick2Button1);
             
-            // Special (Bottom Face Button: Switch B)
             specialPressed = Input.GetKeyDown(KeyCode.RightAlt) || Input.GetKeyDown(KeyCode.Joystick2Button0);
             
-            // Shield (Triggers ZL/ZR)
             shieldPressed = Input.GetKeyDown(KeyCode.RightControl) || Input.GetKeyDown(KeyCode.Joystick2Button6) || Input.GetKeyDown(KeyCode.Joystick2Button7) || Input.GetKeyDown(KeyCode.Joystick2Button4) || Input.GetKeyDown(KeyCode.Joystick2Button5);
             shieldHeld = Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.Joystick2Button6) || Input.GetKey(KeyCode.Joystick2Button7) || Input.GetKey(KeyCode.Joystick2Button4) || Input.GetKey(KeyCode.Joystick2Button5);
         }
 
         if (jumpPressed && !isCharging && !isAttacking && !isShielding && !isDodging) TryJump();
     }
-
-
-
-    // --- REMAINDER OF SCRIPT REMAINS EXACTLY THE SAME ---
 
     void HandleFacingDirection()
     {
@@ -390,11 +362,11 @@ public class UniversalPlayerMovement : MonoBehaviour
     {
         isReflecting = true;
         isAttacking = true;
-        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop horizontal momentum
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); 
         
         if (reflectorVisual != null) reflectorVisual.SetActive(true);
         
-        yield return new WaitForSeconds(0.4f); // Reflector lasts for 0.4 seconds
+        yield return new WaitForSeconds(0.4f);
         
         if (reflectorVisual != null) reflectorVisual.SetActive(false);
         isReflecting = false;
@@ -404,27 +376,26 @@ public class UniversalPlayerMovement : MonoBehaviour
     IEnumerator StartSpinCharge()
     {
         isSpinCharging = true;
-        spinChargeLevel = 1f; // Base charge
+        spinChargeLevel = 1f; 
         yield return null;
     }
 
    IEnumerator ExecuteSpinDash()
     {
         isSpinCharging = false;
-        isSpinDashing = true; // <-- Lock movement
+        isSpinDashing = true; 
         isAttacking = true;
         
         float dashDirection = spriteRenderer.flipX ? -1f : 1f; 
         float finalDashSpeed = spinDashBaseSpeed + (spinChargeLevel * 5f);
-        
-        // Zero out Y velocity so they shoot straight
+       
         rb.linearVelocity = new Vector2(dashDirection * finalDashSpeed, 0f);
         
         yield return new WaitForSeconds(0.4f);
         
         rb.linearVelocity = Vector2.zero; 
         isAttacking = false;
-        isSpinDashing = false; // <-- Unlock movement
+        isSpinDashing = false; 
         spinChargeLevel = 0f;
     }
 
@@ -506,39 +477,32 @@ public class UniversalPlayerMovement : MonoBehaviour
     {
         if (isShielding || isDodging) return;
 
-        // --- SPIN DASH CHARGE STATE ---
         if (isSpinCharging)
         {
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop moving left/right while charging
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); 
             
-            // Rapidly press Special to build charge
             if (specialPressed) 
             {
                 spinChargeLevel += 1f;
                 spinChargeLevel = Mathf.Min(spinChargeLevel, maxSpinCharge);
-                // Optional: Change color or play a sound here to show charge level!
             }
 
-            // If they let go of Down, unleash the Spin Dash!
             if (!downHeld) 
             {
                 StartCoroutine(ExecuteSpinDash());
             }
-            return; // Don't allow other attacks while charging
+            return;
         }
 
-        // --- INITIATING SPECIALS ---
         if (specialPressed && !isAttacking && !isCharging)
         {
             if (downHeld)
             {
-                // DOWN SPECIALS
                 if (isPlayerOne) StartCoroutine(ReflectorSpecial());
                 else StartCoroutine(StartSpinCharge());
             }
             else
             {
-                // NEUTRAL SPECIALS
                 if (isPlayerOne) StartCoroutine(FireballSpecial());
                 else StartCoroutine(SpinSpecial());
             }
@@ -547,13 +511,10 @@ public class UniversalPlayerMovement : MonoBehaviour
 
         if (attackPressed && !isAttacking && !isCharging && !specialPressed)
         {
-            // Check if they are moving fast on the ground (Dash Attack)
             bool isDashingOnGround = isGrounded && Mathf.Abs(rb.linearVelocity.x) >= dashSpeedThreshold;
             
-            // Check if they are moving in the air (either pushing a direction, or drifting from momentum)
             bool isMovingInAir = !isGrounded && (Mathf.Abs(rb.linearVelocity.x) > 0.5f || Mathf.Abs(xInput) > 0.1f);
 
-            // If moving in the air OR dashing on the ground, use the Hammer
             if (isDashingOnGround || isMovingInAir)
             {
                 isCharging = true;
@@ -561,7 +522,6 @@ public class UniversalPlayerMovement : MonoBehaviour
             }
             else 
             {
-                // If standing still on the ground, or perfectly neutral in the air, use Jab!
                 StartCoroutine(JabAttack());
             }
         }
@@ -804,7 +764,6 @@ public class UniversalPlayerMovement : MonoBehaviour
 
    void TryJump()
     {
-        // If grounded, initiate jumpsquat. (Double jumps bypass jumpsquat!)
         if (isGrounded && !isJumpsquatting)
         {
             StartCoroutine(JumpsquatRoutine());
@@ -819,10 +778,8 @@ public class UniversalPlayerMovement : MonoBehaviour
     {
         isJumpsquatting = true;
         
-        // Wait for the specific amount of frames (assuming 60 FPS, 1 frame is ~0.0166s)
         yield return new WaitForSeconds(jumpsquatFrames / 60f);
 
-        // The jumpsquat is over. Check if the player is still holding the jump button.
         float forceToApply = jumpHeld ? jumpForce : shortJumpForce;
         
         ExecuteJump(forceToApply);
@@ -837,7 +794,6 @@ public class UniversalPlayerMovement : MonoBehaviour
             else if (jumpCount > 0 && doubleJumpSound != null) audioSource.PlayOneShot(doubleJumpSound);
         }
 
-        // Reset Y velocity so double jumps feel consistent even when falling
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0); 
         rb.AddForce(Vector2.up * appliedForce, ForceMode2D.Impulse);
         
