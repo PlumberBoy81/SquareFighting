@@ -271,7 +271,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 0.5450981, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.5, g: 0, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -420,6 +420,15 @@ MonoBehaviour:
   spinHitRadius: 1.5
   spinDamage: 10
   spinKnockback: 15
+  isRedCharacter: 0
+  isSideSpecialing: 0
+  boxingGlovePrefab: {fileID: 2615781297230704772, guid: 6715fcfced6654cc086ad4e2c758edc2, type: 3}
+  punchDashSpeed: 25
+  punchDashDuration: 0.25
+  teleportDistance: 8
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 0
   reflectorVisual: {fileID: 1460849230}
   isReflecting: 0
   isSpinCharging: 0
@@ -3838,7 +3847,7 @@ MonoBehaviour:
   player1: {fileID: 95640875}
   player2: {fileID: 2099738276}
   gameOverPanel: {fileID: 1199488528}
-  winnerText: {fileID: 0}
+  winnerText: {fileID: 1394050966}
   pauseMenuPanel: {fileID: 1095880278}
   backgroundMusic: {fileID: 8300000, guid: 9b3773c53136940249305a29f796fe3e, type: 3}
 --- !u!4 &1570203089
@@ -4508,7 +4517,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 0, g: 0, b: 0.54509807, a: 1}
+  m_Color: {r: 0, g: 0, b: 0.5, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -4656,6 +4665,15 @@ MonoBehaviour:
   spinHitRadius: 1.5
   spinDamage: 10
   spinKnockback: 15
+  isRedCharacter: 0
+  isSideSpecialing: 0
+  boxingGlovePrefab: {fileID: 0}
+  punchDashSpeed: 25
+  punchDashDuration: 0.25
+  teleportDistance: 8
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 0
   reflectorVisual: {fileID: 0}
   isReflecting: 0
   isSpinCharging: 0

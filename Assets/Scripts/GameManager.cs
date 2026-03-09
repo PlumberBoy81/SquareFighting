@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement; 
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Game Over UI")]
     public GameObject gameOverPanel;
-    public Text winnerText;
+    public TextMeshProUGUI winnerText;
 
     // --- NEW: PAUSE MENU UI ---
     [Header("Pause Menu UI")]

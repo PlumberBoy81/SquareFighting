@@ -186,8 +186,11 @@ public class UniversalPlayerMovement : MonoBehaviour
         if (charID == 0) 
         {
             // RED CHARACTER STATS
-            isRedCharacter = true;
-            characterColor = Color.red;
+            isRedCharacter = true; // Auto-assign Red Side Special
+            
+            // Replaced Color.red with your custom Dark Red (Hex 800000)
+            characterColor = new Color32(128, 0, 0, 255); 
+            
             runSpeed = 10.5f;          
             groundAcceleration = 60f; 
             groundDeceleration = 45f;  
@@ -205,8 +208,11 @@ public class UniversalPlayerMovement : MonoBehaviour
         else if (charID == 1) 
         {
             // BLUE CHARACTER STATS
-            isRedCharacter = false;
-            characterColor = Color.blue;
+            isRedCharacter = false; // Auto-assign Blue Side Special
+            
+            // Replaced Color.blue with your custom Navy Blue (Hex 000080)
+            characterColor = new Color32(0, 0, 128, 255); 
+            
             runSpeed = 23.1f;           
             groundAcceleration = 75f;
             groundDeceleration = 60f;
