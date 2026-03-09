@@ -9,7 +9,6 @@ public class MainMenuManager : MonoBehaviour
 
     void Start()
     {
-        // Set up and play the Main Menu music
         if (menuMusic != null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
@@ -22,27 +21,25 @@ public class MainMenuManager : MonoBehaviour
 
     void Update()
     {
-        // --- NEW: Controller/Keyboard Support ---
-        // Press Space or the Start button on a controller to jump right in!
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton7))
         {
             StartGame();
         }
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton8))
+        {
+            QuitGame();
+        }
     }
 
-    // This function will be called by our Play Button
     public void StartGame()
     {
-        // Loads the next scene in the Build Settings (which will be your Character Select)
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
     }
 
-    // --- NEW: Quit Function ---
-    // This function will be called by a Quit Button
     public void QuitGame()
     {
-        Debug.Log("Quitting Game..."); // You will see this in the Unity Console when testing
-        Application.Quit(); // This is the command that actually closes the built .exe
+        Debug.Log("Quitting Game..."); 
+        Application.Quit(); 
     }
 }
 
