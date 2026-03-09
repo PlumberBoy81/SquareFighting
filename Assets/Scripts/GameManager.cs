@@ -26,11 +26,9 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // Ensure UI panels are hidden when the match starts
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
 
-        // Set up the Background Music
         if (backgroundMusic != null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
@@ -40,19 +38,16 @@ public class GameManager : MonoBehaviour
             audioSource.Play();
         }
         
-        // Ensure time is running normally at the start of the scene
         Time.timeScale = 1f;
     }
 
     void Update()
     {
-        // If the game isn't over, play normally and check for pauses
         if (!isGameOver)
         {
             CheckForWinner();
 
          
-           // --- NEW: PAUSE INPUT (Keyboard Space or Controller Start) ---
     if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton7))
     {
         if (isPaused)
@@ -68,7 +63,6 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // If the game IS over, Space acts as the restart button
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 RestartGame();
@@ -98,35 +92,33 @@ public class GameManager : MonoBehaviour
         if (audioSource != null) audioSource.pitch = 0.5f; 
     }
 
-    // --- NEW: PAUSE MENU FUNCTIONS ---
-
     public void PauseGame()
     {
         isPaused = true;
-        Time.timeScale = 0f; // This freezes all physics and movement in Unity!
+        Time.timeScale = 0f; 
         
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(true);
-        if (audioSource != null) audioSource.Pause(); // Pauses the music
+        if (audioSource != null) audioSource.Pause(); 
     }
 
     public void ResumeGame()
     {
         isPaused = false;
-        Time.timeScale = 1f; // Unfreezes the game
+        Time.timeScale = 1f;
         
         if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (audioSource != null) audioSource.UnPause(); // Resumes the music
+        if (audioSource != null) audioSource.UnPause(); 
     }
 
     public void RestartGame()
     {
-        Time.timeScale = 1f; // CRITICAL: Unfreeze time before reloading!
+        Time.timeScale = 1f; 
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void QuitToMainMenu()
     {
-        Time.timeScale = 1f; // CRITICAL: Unfreeze time before loading the menu!
-        SceneManager.LoadScene(0); // Index 0 is your Main Menu in Build Settings
+        Time.timeScale = 1f; 
+        SceneManager.LoadScene(0); 
     }
 }
