@@ -128,10 +128,10 @@ public class UniversalPlayerMovement : MonoBehaviour
     
     private bool isAttacking = false;
     private bool isCharging = false;
-    private bool isShielding = false; 
+    public bool isShielding = false; 
     public bool isInvincible = false;
     
-    private bool isDodging = false;
+    public bool isDodging = false;
     private bool hasAirDodged = false;
     
     private float currentChargeMult = 1f;
@@ -405,7 +405,7 @@ public class UniversalPlayerMovement : MonoBehaviour
     {
         isReflecting = true;
         isAttacking = true;
-        rb.velocity = new Vector2(0, rb.velocity.y); // Stop horizontal momentum
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop horizontal momentum
         
         if (reflectorVisual != null) reflectorVisual.SetActive(true);
         
@@ -433,11 +433,11 @@ public class UniversalPlayerMovement : MonoBehaviour
         float finalDashSpeed = spinDashBaseSpeed + (spinChargeLevel * 5f);
         
         // Zero out Y velocity so they shoot straight
-        rb.velocity = new Vector2(dashDirection * finalDashSpeed, 0f);
+        rb.linearVelocity = new Vector2(dashDirection * finalDashSpeed, 0f);
         
         yield return new WaitForSeconds(0.4f);
         
-        rb.velocity = Vector2.zero; 
+        rb.linearVelocity = Vector2.zero; 
         isAttacking = false;
         isSpinDashing = false; // <-- Unlock movement
         spinChargeLevel = 0f;
@@ -450,7 +450,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         isDodging = true;
         isShielding = false; 
         shieldVisual.SetActive(false);
-        rb.velocity = Vector2.zero; 
+        rb.linearVelocity = Vector2.zero; 
         
         float elapsed = 0f;
         while (elapsed < spotDodgeDuration)
@@ -473,12 +473,12 @@ public class UniversalPlayerMovement : MonoBehaviour
         float elapsed = 0f;
         while (elapsed < rollDuration)
         {
-            rb.velocity = new Vector2(direction * rollSpeed, rb.velocity.y);
+            rb.linearVelocity = new Vector2(direction * rollSpeed, rb.linearVelocity.y);
             elapsed += Time.deltaTime;
             yield return null;
         }
         
-        rb.velocity = new Vector2(0, rb.velocity.y); 
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); 
         isDodging = false;
     }
 
@@ -488,16 +488,16 @@ public class UniversalPlayerMovement : MonoBehaviour
         hasAirDodged = true;
         
         rb.gravityScale = 0f; 
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
 
         if (Mathf.Abs(directionX) > 0.1f)
         {
-            rb.velocity = new Vector2(Mathf.Sign(directionX) * airDodgeSpeed, 0);
+            rb.linearVelocity = new Vector2(Mathf.Sign(directionX) * airDodgeSpeed, 0);
         }
 
         yield return new WaitForSeconds(airDodgeDuration);
         
-        rb.velocity = Vector2.zero; 
+        rb.linearVelocity = Vector2.zero; 
         rb.gravityScale = gravityScale;
         isDodging = false;
     }
@@ -508,7 +508,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         {
             isShielding = true;
             shieldVisual.SetActive(true);
-            rb.velocity = new Vector2(0, rb.velocity.y); 
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); 
         }
         else
         {
@@ -524,7 +524,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         // --- SPIN DASH CHARGE STATE ---
         if (isSpinCharging)
         {
-            rb.velocity = new Vector2(0, rb.velocity.y); // Stop moving left/right while charging
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop moving left/right while charging
             
             // Rapidly press Special to build charge
             if (specialPressed) 
@@ -570,10 +570,10 @@ public class UniversalPlayerMovement : MonoBehaviour
         if (attackPressed && !isAttacking && !isCharging && !specialPressed)
         {
             // Check if they are moving fast on the ground (Dash Attack)
-            bool isDashingOnGround = isGrounded && Mathf.Abs(rb.velocity.x) >= dashSpeedThreshold;
+            bool isDashingOnGround = isGrounded && Mathf.Abs(rb.linearVelocity.x) >= dashSpeedThreshold;
             
             // Check if they are moving in the air (either pushing a direction, or drifting from momentum)
-            bool isMovingInAir = !isGrounded && (Mathf.Abs(rb.velocity.x) > 0.5f || Mathf.Abs(xInput) > 0.1f);
+            bool isMovingInAir = !isGrounded && (Mathf.Abs(rb.linearVelocity.x) > 0.5f || Mathf.Abs(xInput) > 0.1f);
 
             // If moving in the air OR dashing on the ground, use the Hammer
             if (isDashingOnGround || isMovingInAir)
@@ -590,7 +590,7 @@ public class UniversalPlayerMovement : MonoBehaviour
 
         if (isCharging)
         {
-            rb.velocity = Vector2.zero;
+            rb.linearVelocity = Vector2.zero;
             rb.gravityScale = 0f;
 
             if (attackHeld)
@@ -653,7 +653,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         isSideSpecialing = true;
         
         // 1. Zero out vertical movement and freeze gravity so they dash perfectly straight
-        rb.velocity = new Vector2((facingRight ? 1 : -1) * punchDashSpeed, 0f);
+        rb.linearVelocity = new Vector2((facingRight ? 1 : -1) * punchDashSpeed, 0f);
         rb.gravityScale = 0f;
 
         // 2. Spawn the boxing glove slightly in front of the player
@@ -674,7 +674,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         // 4. Cleanup and return to normal
         Destroy(glove);
         rb.gravityScale = defaultGravity;
-        rb.velocity = new Vector2(0, rb.velocity.y); // Stop the horizontal momentum
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Stop the horizontal momentum
         
         isSideSpecialing = false;
     }
@@ -700,7 +700,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         transform.position = targetPos;
         
         // 4. Kill momentum so they don't slide wildly after teleporting
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
 
         // 5. Add a tiny bit of "end lag" so they can't spam it instantly
         yield return new WaitForSeconds(0.2f);
@@ -791,7 +791,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         spriteRenderer.color = originalBaseColor;
         transform.rotation = Quaternion.identity; 
 
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
         rb.AddForce(kbDirection.normalized * totalKnockback, ForceMode2D.Impulse);
     }
 
@@ -826,7 +826,7 @@ public class UniversalPlayerMovement : MonoBehaviour
 
         damagePercentage = 0f;
         UpdateUIText();
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
         isCharging = false;
         isShielding = false; 
         isDodging = false; 
@@ -870,9 +870,9 @@ public class UniversalPlayerMovement : MonoBehaviour
         if (isGrounded) accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? groundAcceleration : groundDeceleration;
         else accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airAcceleration : 5f;
 
-        float speedDif = targetSpeed - rb.velocity.x;
+        float speedDif = targetSpeed - rb.linearVelocity.x;
         float movement = speedDif * accelRate * Time.fixedDeltaTime;
-        rb.velocity = new Vector2(rb.velocity.x + movement, rb.velocity.y);
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x + movement, rb.linearVelocity.y);
     }
 
     void ApplyGravityPhysics()
@@ -880,9 +880,9 @@ public class UniversalPlayerMovement : MonoBehaviour
         if (isCharging || isDodging || isSpinDashing) return; 
 
         float currentMaxFall = (downPressed && !isGrounded) ? fastFallSpeed : fallSpeedLimit;
-        if (rb.velocity.y < -currentMaxFall) rb.velocity = new Vector2(rb.velocity.x, -currentMaxFall);
-        if (!isGrounded && downPressed && rb.velocity.y < 0) rb.velocity = new Vector2(rb.velocity.x, -fastFallSpeed);
-        if (!jumpHeld && rb.velocity.y > 0) rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
+        if (rb.linearVelocity.y < -currentMaxFall) rb.linearVelocity = new Vector2(rb.linearVelocity.x, -currentMaxFall);
+        if (!isGrounded && downPressed && rb.linearVelocity.y < 0) rb.linearVelocity = new Vector2(rb.linearVelocity.x, -fastFallSpeed);
+        if (!jumpHeld && rb.linearVelocity.y > 0) rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f);
     }
 
    void TryJump()
@@ -921,7 +921,7 @@ public class UniversalPlayerMovement : MonoBehaviour
         }
 
         // Reset Y velocity so double jumps feel consistent even when falling
-        rb.velocity = new Vector2(rb.velocity.x, 0); 
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0); 
         rb.AddForce(Vector2.up * appliedForce, ForceMode2D.Impulse);
         
         jumpCount++;
